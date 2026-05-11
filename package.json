@@ -1,0 +1,13 @@
+{
+  "name": "20163-question-app",
+  "version": "1.0.0",
+  "description": "20163 Risk Management — Sanmartino Guest Lecture Question Submission App (adapted from the GFM Voting App)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}

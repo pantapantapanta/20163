@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>20163 - Question Wall</title>
+<style>
+  :root {
+    --bg: #151B2D;
+    --bg2: #1E2740;
+    --card: #1B2741;
+    --cyan: #4DC9F6;
+    --light: #C8D0D8;
+    --muted: #7B8CA0;
+    --dark: #0D1117;
+    --green: #2ECC71;
+    --gold: #F1C40F;
+    --red: #E74C3C;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--light); min-height: 100vh; }
+  .header {
+    position: sticky; top: 0; z-index: 10;
+    padding: 18px 28px 14px; background: var(--bg);
+    border-bottom: 1px solid rgba(77,201,246,0.15);
+    display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+  }
+  .header-left h1 { font-size: 0.9rem; font-weight: 400; color: var(--muted); letter-spacing: 0.05em; }
+  .header-left h2 { font-size: 1.55rem; font-weight: 700; color: var(--cyan); margin-top: 2px; }
+  .header-meta { font-size: 0.85rem; color: var(--muted); display: flex; gap: 16px; align-items: center; }
+  .badge { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px;
+           border-radius: 16px; font-size: 0.78rem; font-weight: 600; }
+  .badge.open   { background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid rgba(46,204,113,0.3); }
+  .badge.closed { background: rgba(231,76,60,0.15); color: var(--red);   border: 1px solid rgba(231,76,60,0.3); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .badge.open .dot { background: var(--green); animation: pulse 2s infinite; }
+  .badge.closed .dot { background: var(--red); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .container { padding: 20px 28px; max-width: 1600px; margin: 0 auto; }
+  .area-section { margin-bottom: 28px; }
+  .area-head {
+    display: flex; align-items: baseline; gap: 14px; padding-bottom: 8px; margin-bottom: 14px;
+    border-bottom: 1px solid rgba(77,201,246,0.18);
+  }
+  .area-code { font-size: 1.1rem; font-weight: 700; color: var(--gold); letter-spacing: 0.04em; }
+  .area-title { font-size: 1rem; font-weight: 600; color: var(--cyan); }
+  .area-count { font-size: 0.8rem; color: var(--muted); margin-left: auto; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; }
+  .placeholder {
+    grid-column: 1 / -1;
+    background: rgba(13,17,23,0.4); border: 1px dashed rgba(77,201,246,0.18);
+    border-radius: 10px; padding: 18px; color: var(--muted);
+    font-style: italic; font-size: 0.9rem; text-align: center;
+  }
+
+  .sub-card {
+    background: var(--card); border-radius: 10px; padding: 16px;
+    border: 1px solid rgba(77,201,246,0.12);
+  }
+  .sub-head {
+    font-size: 0.8rem; font-weight: 700; color: var(--cyan);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 12px; padding-bottom: 6px;
+    border-bottom: 1px solid rgba(77,201,246,0.12);
+  }
+  .question {
+    background: rgba(13,17,23,0.55); padding: 11px 13px;
+    border-radius: 7px; margin-bottom: 8px;
+    font-size: 0.92rem; line-height: 1.5;
+    border-left: 3px solid transparent; position: relative; transition: all 0.3s;
+  }
+  .question.selected { border-left-color: var(--gold); background: rgba(241,196,15,0.08); }
+  .question .qlabel {
+    display: inline-block; font-size: 0.7rem; font-weight: 700;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-right: 8px;
+  }
+  .question.selected .qlabel { color: var(--gold); }
+  .question .star { position: absolute; top: 9px; right: 10px; color: var(--gold); font-size: 1rem; }
+
+  .footer { text-align: center; padding: 16px; color: var(--muted); font-size: 0.75rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>20163 RISK MANAGEMENT AND VALUE IN BANKING AND INSURANCE</h1>
+    <h2>Question Wall - Sanmartino Guest Lecture - 12 May 2026</h2>
+  </div>
+  <div class="header-meta">
+    <span id="counter">0 submissions</span>
+    <span id="badge" class="badge closed"><span class="dot"></span><span id="badgeText">Closed</span></span>
+  </div>
+</div>
+
+<div class="container" id="container"></div>
+
+<div class="footer">Refreshes in real time - Selected questions highlighted in gold</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function render(data) {
+  const cont = $('container');
+  cont.innerHTML = '';
+
+  const areas = data.areas || [];
+  const subs = data.submissions || [];
+
+  for (const a of areas) {
+    const section = document.createElement('div');
+    section.className = 'area-section';
+
+    const subsInArea = subs.filter(s => s.area === a.id);
+
+    section.innerHTML = `
+      <div class="area-head">
+        <span class="area-code">${escapeHtml(a.id)}</span>
+        <span class="area-title">${escapeHtml(a.title)}</span>
+        <span class="area-count">${subsInArea.length} group${subsInArea.length === 1 ? '' : 's'}</span>
+      </div>
+      <div class="grid" id="grid-${a.id}"></div>
+    `;
+    cont.appendChild(section);
+
+    const grid = section.querySelector(`#grid-${a.id}`);
+    if (subsInArea.length === 0) {
+      grid.innerHTML = `<div class="placeholder">Awaiting submissions on ${escapeHtml(a.id)}...</div>`;
+    } else {
+      for (const s of subsInArea) {
+        const card = document.createElement('div');
+        card.className = 'sub-card';
+        card.innerHTML = `
+          <div class="sub-head">${escapeHtml(s.groupLabel)} - ${escapeHtml(s.area)}</div>
+          <div class="question${s.sel1 ? ' selected' : ''}">
+            <span class="qlabel">Q1</span>${escapeHtml(s.q1)}${s.sel1 ? '<span class="star">&#9733;</span>' : ''}
+          </div>
+          <div class="question${s.sel2 ? ' selected' : ''}">
+            <span class="qlabel">Q2</span>${escapeHtml(s.q2)}${s.sel2 ? '<span class="star">&#9733;</span>' : ''}
+          </div>
+        `;
+        grid.appendChild(card);
+      }
+    }
+  }
+
+  $('counter').textContent = `${data.submittedCount} submission${data.submittedCount === 1 ? '' : 's'}`;
+  const badge = $('badge');
+  if (data.submissionsOpen) {
+    badge.className = 'badge open';  $('badgeText').textContent = 'Submissions OPEN';
+  } else {
+    badge.className = 'badge closed'; $('badgeText').textContent = 'Submissions closed';
+  }
+}
+
+async function bootstrap() {
+  try {
+    const r = await fetch('/api/questions');
+    const d = await r.json();
+    render(d);
+  } catch (e) {}
+}
+
+function startSSE() {
+  const es = new EventSource('/api/wall/stream');
+  es.onmessage = (e) => {
+    try { render(JSON.parse(e.data)); } catch {}
+  };
+}
+
+bootstrap();
+startSSE();
+</script>
+</body>
+</html>
